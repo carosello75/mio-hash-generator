@@ -1,0 +1,129 @@
+# ========================================
+# vercel.json - Per Vercel
+# ========================================
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "./app.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/"
+    }
+  ]
+}
+
+# ========================================
+# railway.toml - Per Railway
+# ========================================
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "gunicorn app:app"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[variables]
+PORT = "8080"
+
+# ========================================
+# render.yaml - Per Render
+# ========================================
+services:
+  - type: web
+    name: hash-generator
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app"
+    plan: free
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.5"
+
+# ========================================
+# netlify.toml - Per Netlify (se serve)
+# ========================================
+[build]
+  command = "pip install -r requirements.txt"
+  publish = "."
+
+[build.environment]
+  PYTHON_VERSION = "3.11"
+
+[[redirects]]
+  from = "/*"
+  to = "/app.py"
+  status = 200
+
+# ========================================
+# app.json - Per Heroku
+# ========================================
+{
+  "name": "Hash Generator Avanzato",
+  "description": "Generatore di hash crittografici complessi con Flask",
+  "repository": "https://github.com/username/hash-generator",
+  "logo": "https://cdn.iconscout.com/icon/free/png-256/hash-1-226424.png",
+  "keywords": ["python", "flask", "hash", "crypto", "security"],
+  "image": "heroku/python",
+  "stack": "heroku-22",
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ],
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "eco"
+    }
+  },
+  "addons": [],
+  "env": {
+    "FLASK_ENV": {
+      "description": "Flask environment",
+      "value": "production"
+    },
+    "SECRET_KEY": {
+      "description": "Secret key for Flask sessions",
+      "generator": "secret"
+    }
+  }
+}
+
+# ========================================
+# package.json - Per gestione frontend (opzionale)
+# ========================================
+{
+  "name": "hash-generator-flask",
+  "version": "1.0.0",
+  "description": "Generatore Hash Avanzato con Flask",
+  "main": "app.py",
+  "scripts": {
+    "start": "python app.py",
+    "dev": "python app.py",
+    "build": "echo 'No build needed for Flask'",
+    "deploy": "git push origin main"
+  },
+  "keywords": [
+    "hash",
+    "crypto",
+    "flask",
+    "python",
+    "security"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0",
+    "python": ">=3.11.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/username/hash-generator.git"
+  }
+}
