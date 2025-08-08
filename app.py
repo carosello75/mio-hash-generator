@@ -1,5 +1,5 @@
 # ========================================
-# app.py - QUESTO È IL FILE GIUSTO PER FLASK
+# app.py - AGGIORNATO CON SISTEMA RECENSIONI
 # ========================================
 
 from flask import Flask, render_template, request, jsonify
@@ -7,6 +7,7 @@ import hashlib
 import secrets
 import time
 import json
+import os
 from datetime import datetime
 
 app = Flask(__name__)
@@ -112,7 +113,7 @@ class FlaskHashGenerator:
 hash_generator = FlaskHashGenerator()
 
 # ========================================
-# ROUTES (Le pagine del sito)
+# ROUTES PRINCIPALI
 # ========================================
 
 @app.route('/')
@@ -183,6 +184,118 @@ def api_generate_random_text():
     
     return jsonify({'text': result})
 
+# ========================================
+# ROUTES RECENSIONI E CONDIVISIONE
+# ========================================
+
+@app.route('/api/add-review', methods=['POST'])
+def add_review():
+    """Aggiungi una nuova recensione"""
+    try:
+        data = request.get_json()
+        
+        name = data.get('name', '').strip()
+        rating = int(data.get('rating', 0))
+        comment = data.get('comment', '').strip()
+        
+        if not name or not comment or rating < 1 or rating > 5:
+            return jsonify({'error': 'Dati recensione non validi'}), 400
+        
+        if len(name) > 50:
+            return jsonify({'error': 'Nome troppo lungo (max 50 caratteri)'}), 400
+            
+        if len(comment) > 500:
+            return jsonify({'error': 'Commento troppo lungo (max 500 caratteri)'}), 400
+        
+        # Carica recensioni esistenti
+        reviews_file = 'reviews.json'
+        reviews = []
+        if os.path.exists(reviews_file):
+            try:
+                with open(reviews_file, 'r', encoding='utf-8') as f:
+                    reviews = json.load(f)
+            except:
+                reviews = []
+        
+        # Nuova recensione
+        new_review = {
+            'id': len(reviews) + 1,
+            'name': name,
+            'rating': rating,
+            'comment': comment,
+            'date': datetime.now().isoformat(),
+            'timestamp': datetime.now().strftime('%d/%m/%Y alle %H:%M')
+        }
+        
+        reviews.append(new_review)
+        
+        # Salva recensioni (con gestione errori)
+        try:
+            with open(reviews_file, 'w', encoding='utf-8') as f:
+                json.dump(reviews, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            # Se non riesce a salvare su file, torna comunque successo
+            # (in produzione potresti usare un database)
+            pass
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Grazie per la recensione!',
+            'review': new_review
+        })
+        
+    except ValueError:
+        return jsonify({'error': 'Rating deve essere un numero tra 1 e 5'}), 400
+    except Exception as e:
+        return jsonify({'error': 'Errore interno del server'}), 500
+
+@app.route('/api/get-reviews')
+def get_reviews():
+    """Ottieni tutte le recensioni"""
+    try:
+        reviews_file = 'reviews.json'
+        reviews = []
+        
+        if os.path.exists(reviews_file):
+            try:
+                with open(reviews_file, 'r', encoding='utf-8') as f:
+                    reviews = json.load(f)
+            except:
+                reviews = []
+        
+        # Ordina per data (più recenti prima) e limita a 50
+        reviews = sorted(reviews, key=lambda x: x['date'], reverse=True)[:50]
+        
+        # Calcola statistiche
+        total_reviews = len(reviews)
+        if total_reviews > 0:
+            avg_rating = sum(r['rating'] for r in reviews) / total_reviews
+            rating_distribution = {i: sum(1 for r in reviews if r['rating'] == i) for i in range(1, 6)}
+        else:
+            avg_rating = 0
+            rating_distribution = {i: 0 for i in range(1, 6)}
+        
+        return jsonify({
+            'reviews': reviews,
+            'stats': {
+                'total': total_reviews,
+                'average_rating': round(avg_rating, 1),
+                'distribution': rating_distribution
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'error': 'Errore nel caricamento recensioni'}), 500
+
+@app.route('/reviews')
+def reviews_page():
+    """Pagina recensioni dedicata"""
+    return render_template('reviews.html')
+
+# ========================================
+# ROUTES VARIE
+# ========================================
+
 @app.route('/docs')
 def docs():
     """Documentazione API"""
@@ -194,7 +307,15 @@ def health():
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
-        'algorithms_available': list(hash_generator.algorithms.keys())
+        'algorithms_available': list(hash_generator.algorithms.keys()),
+        'features': [
+            'Hash Generation',
+            'Multiple Algorithms',
+            'Salt Support', 
+            'Multiple Iterations',
+            'Reviews System',
+            'Social Sharing'
+        ]
     })
 
 # ========================================
@@ -203,11 +324,11 @@ def health():
 
 @app.errorhandler(404)
 def not_found(error):
-    return render_template('404.html'), 404
+    return jsonify({'error': 'Endpoint non trovato'}), 404
 
 @app.errorhandler(500)
 def internal_error(error):
-    return render_template('500.html'), 500
+    return jsonify({'error': 'Errore interno del server'}), 500
 
 # ========================================
 # AVVIO DELL'APP
