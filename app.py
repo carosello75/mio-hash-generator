@@ -1,5 +1,5 @@
 # ========================================
-# app.py - AGGIORNATO CON SISTEMA RECENSIONI
+# app.py - COMPLETO CON DATABASE SQLITE PERSISTENTE
 # ========================================
 
 from flask import Flask, render_template, request, jsonify
@@ -8,10 +8,137 @@ import secrets
 import time
 import json
 import os
+import sqlite3
 from datetime import datetime
+from contextlib import contextmanager
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here-change-this'
+
+# ========================================
+# CLASSE DATABASE RECENSIONI PERSISTENTE
+# ========================================
+
+class ReviewsDatabase:
+    def __init__(self, db_path='reviews.db'):
+        self.db_path = db_path
+        self.init_database()
+    
+    @contextmanager
+    def get_db_connection(self):
+        """Context manager per connessioni database sicure"""
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        try:
+            yield conn
+        finally:
+            conn.close()
+    
+    def init_database(self):
+        """Inizializza il database delle recensioni"""
+        with self.get_db_connection() as conn:
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS reviews (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+                    comment TEXT NOT NULL,
+                    date TEXT NOT NULL,
+                    timestamp TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    ip_hash TEXT DEFAULT NULL
+                )
+            ''')
+            conn.commit()
+            print("✅ Database recensioni inizializzato correttamente")
+    
+    def add_review(self, name, rating, comment, ip_hash=None):
+        """Aggiungi una nuova recensione"""
+        date_iso = datetime.now().isoformat()
+        timestamp_human = datetime.now().strftime('%d/%m/%Y alle %H:%M')
+        
+        with self.get_db_connection() as conn:
+            cursor = conn.execute('''
+                INSERT INTO reviews (name, rating, comment, date, timestamp, ip_hash)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (name, rating, comment, date_iso, timestamp_human, ip_hash))
+            
+            review_id = cursor.lastrowid
+            conn.commit()
+            
+            print(f"✅ Nuova recensione aggiunta: ID {review_id}, Rating {rating}/5")
+            
+            return {
+                'id': review_id,
+                'name': name,
+                'rating': rating,
+                'comment': comment,
+                'date': date_iso,
+                'timestamp': timestamp_human
+            }
+    
+    def get_reviews(self, limit=50):
+        """Ottieni tutte le recensioni"""
+        with self.get_db_connection() as conn:
+            cursor = conn.execute('''
+                SELECT id, name, rating, comment, date, timestamp FROM reviews 
+                ORDER BY created_at DESC 
+                LIMIT ?
+            ''', (limit,))
+            
+            reviews = []
+            for row in cursor.fetchall():
+                reviews.append({
+                    'id': row['id'],
+                    'name': row['name'],
+                    'rating': row['rating'],
+                    'comment': row['comment'],
+                    'date': row['date'],
+                    'timestamp': row['timestamp']
+                })
+            
+            return reviews
+    
+    def get_stats(self):
+        """Ottieni statistiche recensioni"""
+        with self.get_db_connection() as conn:
+            # Conteggio totale
+            total = conn.execute('SELECT COUNT(*) as count FROM reviews').fetchone()['count']
+            
+            if total == 0:
+                return {
+                    'total': 0,
+                    'average_rating': 0,
+                    'distribution': {i: 0 for i in range(1, 6)}
+                }
+            
+            # Media rating
+            avg = conn.execute('SELECT AVG(rating) as avg FROM reviews').fetchone()['avg']
+            
+            # Distribuzione rating
+            distribution = {}
+            for i in range(1, 6):
+                count = conn.execute('SELECT COUNT(*) as count FROM reviews WHERE rating = ?', (i,)).fetchone()['count']
+                distribution[i] = count
+            
+            return {
+                'total': total,
+                'average_rating': round(avg, 1),
+                'distribution': distribution
+            }
+    
+    def check_recent_review(self, ip_hash, hours=24):
+        """Controlla se un IP ha già lasciato recensioni recenti"""
+        with self.get_db_connection() as conn:
+            count = conn.execute('''
+                SELECT COUNT(*) as count FROM reviews 
+                WHERE ip_hash = ? AND datetime(created_at) > datetime('now', '-{} hours')
+            '''.format(hours), (ip_hash,)).fetchone()['count']
+            return count > 0
+
+# ========================================
+# CLASSE HASH GENERATOR (INVARIATA)
+# ========================================
 
 class FlaskHashGenerator:
     def __init__(self):
@@ -109,8 +236,24 @@ class FlaskHashGenerator:
         
         return results
 
-# Istanza globale del generatore
+# ========================================
+# ISTANZE GLOBALI
+# ========================================
+
 hash_generator = FlaskHashGenerator()
+reviews_db = ReviewsDatabase()
+
+# ========================================
+# UTILITY FUNCTIONS
+# ========================================
+
+def get_client_ip_hash():
+    """Ottieni hash IP del cliente per prevenire spam"""
+    ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
+    if ip:
+        # Hash dell'IP per privacy
+        return hashlib.sha256(ip.encode()).hexdigest()[:16]
+    return None
 
 # ========================================
 # ROUTES PRINCIPALI
@@ -135,6 +278,9 @@ def api_generate_hash():
         if not input_text:
             return jsonify({'error': 'Testo di input richiesto'}), 400
         
+        if iterations < 1 or iterations > 10:
+            return jsonify({'error': 'Iterazioni devono essere tra 1 e 10'}), 400
+        
         # Genera hash per tutti gli algoritmi
         results = hash_generator.generate_all_hashes(
             input_text, 
@@ -155,42 +301,53 @@ def api_generate_hash():
             }
         })
         
+    except ValueError as e:
+        return jsonify({'error': 'Dati di input non validi'}), 400
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Errore interno del server'}), 500
 
 @app.route('/api/generate-salt')
 def api_generate_salt():
     """API per generare salt casuale"""
-    length = request.args.get('length', 32, type=int)
-    salt = hash_generator.generate_salt(length)
-    return jsonify({'salt': salt})
+    try:
+        length = request.args.get('length', 32, type=int)
+        if length < 8 or length > 128:
+            return jsonify({'error': 'Lunghezza salt deve essere tra 8 e 128'}), 400
+            
+        salt = hash_generator.generate_salt(length)
+        return jsonify({'salt': salt})
+    except Exception as e:
+        return jsonify({'error': 'Errore nella generazione salt'}), 500
 
 @app.route('/api/generate-random-text')
 def api_generate_random_text():
     """API per generare testo casuale complesso"""
-    import string
-    import random
-    
-    # Caratteri speciali e unicode
-    chars = string.ascii_letters + string.digits + '!@#$%^&*()_+-=[]{}|;:,.<>?'
-    special_chars = '∑∏∫∂∆∇√∞≠≤≥±×÷∈∉∪∩⊂⊃⊆⊇∧∨¬→←↑↓↔'
-    
-    result = ''
-    for _ in range(50):
-        if random.random() > 0.8:
-            result += random.choice(special_chars)
-        else:
-            result += random.choice(chars)
-    
-    return jsonify({'text': result})
+    try:
+        import string
+        import random
+        
+        # Caratteri speciali e unicode
+        chars = string.ascii_letters + string.digits + '!@#$%^&*()_+-=[]{}|;:,.<>?'
+        special_chars = '∑∏∫∂∆∇√∞≠≤≥±×÷∈∉∪∩⊂⊃⊆⊇∧∨¬→←↑↓↔'
+        
+        result = ''
+        for _ in range(50):
+            if random.random() > 0.8:
+                result += random.choice(special_chars)
+            else:
+                result += random.choice(chars)
+        
+        return jsonify({'text': result})
+    except Exception as e:
+        return jsonify({'error': 'Errore nella generazione testo'}), 500
 
 # ========================================
-# ROUTES RECENSIONI E CONDIVISIONE
+# ROUTES RECENSIONI - DATABASE PERSISTENTE
 # ========================================
 
 @app.route('/api/add-review', methods=['POST'])
 def add_review():
-    """Aggiungi una nuova recensione"""
+    """Aggiungi una nuova recensione - VERSIONE DATABASE PERSISTENTE"""
     try:
         data = request.get_json()
         
@@ -198,8 +355,12 @@ def add_review():
         rating = int(data.get('rating', 0))
         comment = data.get('comment', '').strip()
         
-        if not name or not comment or rating < 1 or rating > 5:
-            return jsonify({'error': 'Dati recensione non validi'}), 400
+        # Validazioni
+        if not name or not comment:
+            return jsonify({'error': 'Nome e commento sono obbligatori'}), 400
+            
+        if rating < 1 or rating > 5:
+            return jsonify({'error': 'Rating deve essere tra 1 e 5 stelle'}), 400
         
         if len(name) > 50:
             return jsonify({'error': 'Nome troppo lungo (max 50 caratteri)'}), 400
@@ -207,116 +368,109 @@ def add_review():
         if len(comment) > 500:
             return jsonify({'error': 'Commento troppo lungo (max 500 caratteri)'}), 400
         
-        # Carica recensioni esistenti
-        reviews_file = 'reviews.json'
-        reviews = []
-        if os.path.exists(reviews_file):
-            try:
-                with open(reviews_file, 'r', encoding='utf-8') as f:
-                    reviews = json.load(f)
-            except:
-                reviews = []
+        # Prevenzione spam (opzionale)
+        ip_hash = get_client_ip_hash()
+        if ip_hash and reviews_db.check_recent_review(ip_hash, hours=1):
+            return jsonify({'error': 'Hai già lasciato una recensione recentemente. Riprova tra un\'ora.'}), 429
         
-        # Nuova recensione
-        new_review = {
-            'id': len(reviews) + 1,
-            'name': name,
-            'rating': rating,
-            'comment': comment,
-            'date': datetime.now().isoformat(),
-            'timestamp': datetime.now().strftime('%d/%m/%Y alle %H:%M')
-        }
-        
-        reviews.append(new_review)
-        
-        # Salva recensioni (con gestione errori)
-        try:
-            with open(reviews_file, 'w', encoding='utf-8') as f:
-                json.dump(reviews, f, indent=2, ensure_ascii=False)
-        except Exception as e:
-            # Se non riesce a salvare su file, torna comunque successo
-            # (in produzione potresti usare un database)
-            pass
+        # Salva nel database
+        new_review = reviews_db.add_review(name, rating, comment, ip_hash)
         
         return jsonify({
             'success': True, 
-            'message': 'Grazie per la recensione!',
+            'message': 'Grazie per la recensione! È stata salvata permanentemente.',
             'review': new_review
         })
         
     except ValueError:
         return jsonify({'error': 'Rating deve essere un numero tra 1 e 5'}), 400
     except Exception as e:
+        print(f"Errore aggiunta recensione: {e}")
         return jsonify({'error': 'Errore interno del server'}), 500
 
 @app.route('/api/get-reviews')
 def get_reviews():
-    """Ottieni tutte le recensioni"""
+    """Ottieni tutte le recensioni - VERSIONE DATABASE PERSISTENTE"""
     try:
-        reviews_file = 'reviews.json'
-        reviews = []
-        
-        if os.path.exists(reviews_file):
-            try:
-                with open(reviews_file, 'r', encoding='utf-8') as f:
-                    reviews = json.load(f)
-            except:
-                reviews = []
-        
-        # Ordina per data (più recenti prima) e limita a 50
-        reviews = sorted(reviews, key=lambda x: x['date'], reverse=True)[:50]
-        
-        # Calcola statistiche
-        total_reviews = len(reviews)
-        if total_reviews > 0:
-            avg_rating = sum(r['rating'] for r in reviews) / total_reviews
-            rating_distribution = {i: sum(1 for r in reviews if r['rating'] == i) for i in range(1, 6)}
-        else:
-            avg_rating = 0
-            rating_distribution = {i: 0 for i in range(1, 6)}
+        reviews = reviews_db.get_reviews(50)
+        stats = reviews_db.get_stats()
         
         return jsonify({
             'reviews': reviews,
-            'stats': {
-                'total': total_reviews,
-                'average_rating': round(avg_rating, 1),
-                'distribution': rating_distribution
-            }
+            'stats': stats,
+            'message': f'Caricate {len(reviews)} recensioni dal database permanente'
         })
         
     except Exception as e:
-        return jsonify({'error': 'Errore nel caricamento recensioni'}), 500
-
-@app.route('/reviews')
-def reviews_page():
-    """Pagina recensioni dedicata"""
-    return render_template('reviews.html')
+        print(f"Errore caricamento recensioni: {e}")
+        return jsonify({
+            'reviews': [],
+            'stats': {'total': 0, 'average_rating': 0, 'distribution': {i: 0 for i in range(1, 6)}},
+            'error': 'Errore nel caricamento recensioni'
+        }), 500
 
 # ========================================
 # ROUTES VARIE
 # ========================================
 
+@app.route('/reviews')
+def reviews_page():
+    """Pagina recensioni dedicata"""
+    try:
+        return render_template('reviews.html')
+    except:
+        return jsonify({'error': 'Pagina recensioni non disponibile'}), 404
+
 @app.route('/docs')
 def docs():
     """Documentazione API"""
-    return render_template('docs.html')
+    try:
+        return render_template('docs.html')
+    except:
+        return jsonify({'error': 'Documentazione non disponibile'}), 404
 
 @app.route('/health')
 def health():
     """Health check per deployment"""
+    try:
+        # Test database
+        stats = reviews_db.get_stats()
+        db_status = "connected"
+    except:
+        stats = None
+        db_status = "error"
+    
     return jsonify({
         'status': 'healthy',
         'timestamp': datetime.now().isoformat(),
         'algorithms_available': list(hash_generator.algorithms.keys()),
+        'database_status': db_status,
+        'reviews_count': stats['total'] if stats else 0,
         'features': [
-            'Hash Generation',
-            'Multiple Algorithms',
+            'Hash Generation (5 algorithms)',
             'Salt Support', 
             'Multiple Iterations',
-            'Reviews System',
-            'Social Sharing'
+            'Persistent Reviews System',
+            'Social Sharing',
+            'SQLite Database',
+            'Anti-Spam Protection'
         ]
     })
+
+@app.route('/api/stats')
+def api_stats():
+    """Statistiche pubbliche del servizio"""
+    try:
+        review_stats = reviews_db.get_stats()
+        
+        return jsonify({
+            'total_reviews': review_stats['total'],
+            'average_rating': review_stats['average_rating'],
+            'algorithms_supported': len(hash_generator.algorithms),
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({'error': 'Errore nel caricamento statistiche'}), 500
 
 # ========================================
 # ERROR HANDLERS
@@ -324,18 +478,36 @@ def health():
 
 @app.errorhandler(404)
 def not_found(error):
-    return jsonify({'error': 'Endpoint non trovato'}), 404
+    return jsonify({'error': 'Endpoint non trovato', 'available_endpoints': [
+        'GET /', 'POST /api/generate-hash', 'GET /api/generate-salt',
+        'GET /api/generate-random-text', 'POST /api/add-review', 
+        'GET /api/get-reviews', 'GET /health'
+    ]}), 404
 
 @app.errorhandler(500)
 def internal_error(error):
     return jsonify({'error': 'Errore interno del server'}), 500
+
+@app.errorhandler(429)
+def rate_limit_handler(e):
+    return jsonify({'error': 'Troppi tentativi. Riprova più tardi.'}), 429
 
 # ========================================
 # AVVIO DELL'APP
 # ========================================
 
 if __name__ == '__main__':
-    # Per sviluppo locale
+    # Inizializzazione
+    print("🚀 Avvio Hash Generator Pro...")
+    print("✅ Database SQLite inizializzato")
+    print("✅ Hash Generator caricato")
+    print("✅ Sistema recensioni attivo")
+    
+    # Per sviluppo locale e produzione
     import os
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    debug_mode = os.environ.get('FLASK_ENV') == 'development'
+    
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)
+    
+    print("🎉 Hash Generator Pro avviato con successo!")
