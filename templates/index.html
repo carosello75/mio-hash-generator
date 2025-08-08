@@ -1,1081 +1,134 @@
-<!-- ========================================
-     templates/base.html - Template Base
-     ======================================== -->
-     <!DOCTYPE html>
-     <html lang="it">
-     <head>
-         <meta charset="UTF-8">
-         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-         <title>{% block title %}Generatore Hash Avanzato{% endblock %}</title>
-         
-         <!-- Bootstrap CSS -->
-         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-         <!-- Font Awesome -->
-         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-         <!-- Google Fonts -->
-         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-         
-         <style>
-             :root {
-                 --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                 --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-                 --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-                 --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
-                 --shadow-xl: 0 20px 40px rgba(0, 0, 0, 0.15);
-             }
-             
-             body {
-                 font-family: 'Inter', sans-serif;
-                 background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-                 min-height: 100vh;
-             }
-             
-             .gradient-bg {
-                 background: var(--primary-gradient);
-             }
-             
-             .gradient-text {
-                 background: var(--primary-gradient);
-                 -webkit-background-clip: text;
-                 -webkit-text-fill-color: transparent;
-                 background-clip: text;
-             }
-             
-             .card-modern {
-                 border: none;
-                 border-radius: 20px;
-                 box-shadow: var(--shadow-lg);
-                 backdrop-filter: blur(10px);
-                 background: rgba(255, 255, 255, 0.95);
-                 transition: all 0.3s ease;
-             }
-             
-             .card-modern:hover {
-                 transform: translateY(-5px);
-                 box-shadow: var(--shadow-xl);
-             }
-             
-             .hash-result {
-                 font-family: 'Fira Code', 'Courier New', monospace;
-                 word-break: break-all;
-                 background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-                 padding: 20px;
-                 border-radius: 15px;
-                 border-left: 5px solid #007bff;
-                 position: relative;
-                 overflow: hidden;
-             }
-             
-             .hash-result::before {
-                 content: '';
-                 position: absolute;
-                 top: 0;
-                 left: 0;
-                 right: 0;
-                 height: 3px;
-                 background: var(--success-gradient);
-             }
-             
-             .algorithm-badge {
-                 padding: 8px 16px;
-                 border-radius: 25px;
-                 font-weight: 600;
-                 font-size: 0.75rem;
-                 text-transform: uppercase;
-                 letter-spacing: 0.5px;
-             }
-             
-             .btn-modern {
-                 border-radius: 12px;
-                 padding: 12px 30px;
-                 font-weight: 600;
-                 text-transform: uppercase;
-                 letter-spacing: 0.5px;
-                 transition: all 0.3s ease;
-                 border: none;
-                 position: relative;
-                 overflow: hidden;
-             }
-             
-             .btn-modern::before {
-                 content: '';
-                 position: absolute;
-                 top: 50%;
-                 left: 50%;
-                 width: 0;
-                 height: 0;
-                 border-radius: 50%;
-                 background: rgba(255, 255, 255, 0.3);
-                 transition: all 0.6s ease;
-                 transform: translate(-50%, -50%);
-             }
-             
-             .btn-modern:hover::before {
-                 width: 300px;
-                 height: 300px;
-             }
-             
-             .btn-primary-modern {
-                 background: var(--primary-gradient);
-                 color: white;
-             }
-             
-             .btn-success-modern {
-                 background: var(--success-gradient);
-                 color: white;
-             }
-             
-             .form-control-modern {
-                 border-radius: 12px;
-                 border: 2px solid #e9ecef;
-                 padding: 15px 20px;
-                 transition: all 0.3s ease;
-                 background: rgba(255, 255, 255, 0.8);
-             }
-             
-             .form-control-modern:focus {
-                 border-color: #667eea;
-                 box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
-                 background: white;
-             }
-             
-             .navbar-modern {
-                 backdrop-filter: blur(20px);
-                 background: rgba(102, 126, 234, 0.9) !important;
-                 border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-             }
-             
-             .loading-modern {
-                 display: none;
-             }
-             
-             .loading-modern.show {
-                 display: flex;
-                 align-items: center;
-                 justify-content: center;
-                 margin-top: 20px;
-             }
-             
-             .spinner-modern {
-                 width: 40px;
-                 height: 40px;
-                 border: 4px solid rgba(102, 126, 234, 0.1);
-                 border-left-color: #667eea;
-                 border-radius: 50%;
-                 animation: spin 1s linear infinite;
-             }
-             
-             @keyframes spin {
-                 to { transform: rotate(360deg); }
-             }
-             
-             .hero-section {
-                 padding: 100px 0;
-                 background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-                 border-radius: 0 0 50px 50px;
-                 margin-bottom: 50px;
-             }
-             
-             .feature-icon {
-                 width: 60px;
-                 height: 60px;
-                 border-radius: 15px;
-                 display: flex;
-                 align-items: center;
-                 justify-content: center;
-                 margin-bottom: 20px;
-                 background: var(--primary-gradient);
-                 color: white;
-                 font-size: 24px;
-             }
-             
-             .security-info {
-                 background: linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 138, 101, 0.1) 100%);
-                 border: 2px solid rgba(255, 193, 7, 0.2);
-                 border-radius: 20px;
-                 padding: 30px;
-             }
-             
-             .toast-modern {
-                 border-radius: 12px;
-                 border: none;
-                 backdrop-filter: blur(10px);
-             }
-         </style>
-         
-         {% block extra_css %}{% endblock %}
-     </head>
-     <body>
-         <!-- Navbar -->
-         <nav class="navbar navbar-expand-lg navbar-dark navbar-modern fixed-top">
-             <div class="container">
-                 <a class="navbar-brand fw-bold" href="{{ url_for('index') }}">
-                     <i class="fas fa-shield-halved me-2"></i>
-                     <span class="gradient-text">HashGen Pro</span>
-                 </a>
-                 
-                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                     <span class="navbar-toggler-icon"></span>
-                 </button>
-                 
-                 <div class="collapse navbar-collapse" id="navbarNav">
-                     <ul class="navbar-nav ms-auto">
-                         <li class="nav-item">
-                             <a class="nav-link" href="{{ url_for('index') }}">
-                                 <i class="fas fa-home me-1"></i>Home
-                             </a>
-                         </li>
-                         <li class="nav-item">
-                             <a class="nav-link" href="{{ url_for('docs') }}">
-                                 <i class="fas fa-book me-1"></i>API Docs
-                             </a>
-                         </li>
-                         <li class="nav-item">
-                             <a class="nav-link" href="/health" target="_blank">
-                                 <i class="fas fa-heartbeat me-1"></i>Status
-                             </a>
-                         </li>
-                     </ul>
-                 </div>
-             </div>
-         </nav>
-     
-         <!-- Main Content -->
-         <main style="margin-top: 76px;">
-             {% block content %}{% endblock %}
-         </main>
-     
-         <!-- Footer -->
-         <footer class="py-5 mt-5" style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);">
-             <div class="container">
-                 <div class="row">
-                     <div class="col-md-6">
-                         <h5 class="text-white mb-3">
-                             <i class="fas fa-shield-halved me-2"></i>HashGen Pro
-                         </h5>
-                         <p class="text-light opacity-75">
-                             Generatore di hash crittografici avanzato per massima sicurezza e affidabilità.
-                         </p>
-                     </div>
-                     <div class="col-md-6 text-md-end">
-                         <p class="text-light opacity-75 mb-2">
-                             © 2024 HashGen Pro. Sicurezza crittografica di livello enterprise.
-                         </p>
-                         <div class="d-flex justify-content-md-end gap-3">
-                             <a href="#" class="text-light opacity-75"><i class="fab fa-github"></i></a>
-                             <a href="#" class="text-light opacity-75"><i class="fab fa-twitter"></i></a>
-                             <a href="#" class="text-light opacity-75"><i class="fas fa-envelope"></i></a>
-                         </div>
-                     </div>
-                 </div>
-             </div>
-         </footer>
-     
-         <!-- Toast Container -->
-         <div class="toast-container position-fixed bottom-0 end-0 p-3">
-             <div id="copyToast" class="toast toast-modern" role="alert">
-                 <div class="toast-header">
-                     <i class="fas fa-check-circle text-success me-2"></i>
-                     <strong class="me-auto">Successo</strong>
-                     <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
-                 </div>
-                 <div class="toast-body">
-                     Hash copiato negli appunti!
-                 </div>
-             </div>
-         </div>
-     
-         <!-- Bootstrap JS -->
-         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-         {% block scripts %}{% endblock %}
-     </body>
-     </html>
-     
-     <!-- ========================================
-          templates/index.html - Pagina Principale MODERNA
-          ======================================== -->
-     {% extends "base.html" %}
-     
-     {% block content %}
-     <!-- Hero Section -->
-     <section class="hero-section">
-         <div class="container">
-             <div class="row justify-content-center text-center">
-                 <div class="col-lg-8">
-                     <div class="mb-4">
-                         <div class="feature-icon mx-auto mb-4">
-                             <i class="fas fa-lock"></i>
-                         </div>
-                         <h1 class="display-4 fw-bold mb-4">
-                             Generatore Hash <span class="gradient-text">Avanzato</span>
-                         </h1>
-                         <p class="lead text-muted mb-4">
-                             Crea hash crittografici complessi con algoritmi multipli, salt personalizzati e parametri avanzati per massima sicurezza.
-                         </p>
-                     </div>
-                     
-                     <!-- Feature Cards Row -->
-                     <div class="row g-4 mb-5">
-                         <div class="col-md-4">
-                             <div class="text-center">
-                                 <div class="feature-icon mx-auto" style="background: var(--success-gradient);">
-                                     <i class="fas fa-shield-alt"></i>
-                                 </div>
-                                 <h6 class="fw-bold">5 Algoritmi</h6>
-                                 <small class="text-muted">MD5, SHA-1, SHA-256, SHA-384, SHA-512</small>
-                             </div>
-                         </div>
-                         <div class="col-md-4">
-                             <div class="text-center">
-                                 <div class="feature-icon mx-auto" style="background: var(--secondary-gradient);">
-                                     <i class="fas fa-cogs"></i>
-                                 </div>
-                                 <h6 class="fw-bold">Salt & Iterazioni</h6>
-                                 <small class="text-muted">Complessità computazionale avanzata</small>
-                             </div>
-                         </div>
-                         <div class="col-md-4">
-                             <div class="text-center">
-                                 <div class="feature-icon mx-auto" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);">
-                                     <i class="fas fa-rocket"></i>
-                                 </div>
-                                 <h6 class="fw-bold">API REST</h6>
-                                 <small class="text-muted">Integrazione facile e veloce</small>
-                             </div>
-                         </div>
-                     </div>
-                 </div>
-             </div>
-         </div>
-     </section>
-     
-     <!-- Hash Generator Form -->
-     <div class="container py-5">
-         <div class="row justify-content-center">
-             <div class="col-lg-10">
-                 <div class="card card-modern">
-                     <div class="card-header gradient-bg text-white text-center py-4">
-                         <h4 class="mb-0 fw-bold">
-                             <i class="fas fa-hammer me-2"></i>Configurazione Hash
-                         </h4>
-                     </div>
-                     <div class="card-body p-5">
-                         <form id="hashForm">
-                             <div class="row g-4">
-                                 <!-- Left Column -->
-                                 <div class="col-lg-6">
-                                     <div class="mb-4">
-                                         <label for="inputText" class="form-label fw-bold">
-                                             <i class="fas fa-edit me-2 text-primary"></i>
-                                             Testo da convertire in hash
-                                         </label>
-                                         <div class="position-relative">
-                                             <textarea 
-                                                 id="inputText" 
-                                                 class="form-control form-control-modern" 
-                                                 rows="5" 
-                                                 placeholder="Inserisci il testo da convertire in hash... Es: Password123, documenti, dati sensibili"
-                                             ></textarea>
-                                             <button 
-                                                 type="button" 
-                                                 class="btn btn-outline-primary btn-sm position-absolute top-0 end-0 m-2" 
-                                                 id="generateRandomText"
-                                                 title="Genera testo casuale complesso"
-                                             >
-                                                 <i class="fas fa-dice"></i>
-                                             </button>
-                                         </div>
-                                     </div>
-     
-                                     <div class="mb-4">
-                                         <label for="saltInput" class="form-label fw-bold">
-                                             <i class="fas fa-key me-2 text-warning"></i>
-                                             Salt (per maggiore sicurezza)
-                                         </label>
-                                         <div class="position-relative">
-                                             <input 
-                                                 type="text" 
-                                                 id="saltInput" 
-                                                 class="form-control form-control-modern" 
-                                                 placeholder="Salt opzionale per aumentare la complessità..."
-                                             >
-                                             <button 
-                                                 type="button" 
-                                                 class="btn btn-outline-warning btn-sm position-absolute top-50 end-0 translate-middle-y me-2" 
-                                                 id="generateSalt"
-                                                 title="Genera salt casuale"
-                                             >
-                                                 <i class="fas fa-magic"></i>
-                                             </button>
-                                         </div>
-                                     </div>
-                                 </div>
-     
-                                 <!-- Right Column -->
-                                 <div class="col-lg-6">
-                                     <div class="mb-4">
-                                         <label for="iterations" class="form-label fw-bold">
-                                             <i class="fas fa-sync me-2 text-info"></i>
-                                             Iterazioni (complessità computazionale)
-                                         </label>
-                                         <input 
-                                             type="range" 
-                                             id="iterations" 
-                                             class="form-range" 
-                                             min="1" 
-                                             max="10" 
-                                             value="5"
-                                         >
-                                         <div class="d-flex justify-content-between text-muted small">
-                                             <span>1</span>
-                                             <span id="iterationValue" class="fw-bold text-primary">5</span>
-                                             <span>10</span>
-                                         </div>
-                                         <small class="text-muted">
-                                             Più iterazioni = maggiore sicurezza (tempi più lunghi)
-                                         </small>
-                                     </div>
-     
-                                     <div class="mb-4">
-                                         <div class="form-check form-switch">
-                                             <input 
-                                                 type="checkbox" 
-                                                 id="useTimestamp" 
-                                                 class="form-check-input" 
-                                                 role="switch"
-                                             >
-                                             <label for="useTimestamp" class="form-check-label fw-bold">
-                                                 <i class="fas fa-clock me-2 text-success"></i>
-                                                 Includi timestamp e dati casuali
-                                             </label>
-                                         </div>
-                                         <small class="text-muted">
-                                             Aggiunge entropia temporale per hash univoci
-                                         </small>
-                                     </div>
-     
-                                     <!-- Quick Tips -->
-                                     <div class="alert alert-info border-0" style="background: linear-gradient(135deg, rgba(13, 202, 240, 0.1) 0%, rgba(13, 110, 253, 0.1) 100%);">
-                                         <h6 class="fw-bold text-info">
-                                             <i class="fas fa-lightbulb me-2"></i>Tips Rapidi
-                                         </h6>
-                                         <ul class="mb-0 small">
-                                             <li>Usa <strong>SHA-256+</strong> per applicazioni critiche</li>
-                                             <li>Salt lungo e unico per ogni hash</li>
-                                             <li>Più iterazioni per password storage</li>
-                                             <li>Timestamp per ID univoci temporali</li>
-                                         </ul>
-                                     </div>
-                                 </div>
-                             </div>
-     
-                             <!-- Submit Button -->
-                             <div class="text-center mt-5">
-                                 <button type="submit" class="btn btn-primary-modern btn-modern btn-lg px-5">
-                                     <i class="fas fa-hammer me-2"></i>
-                                     Genera Hash Complessi
-                                 </button>
-                                 
-                                 <div class="loading-modern mt-4" id="loadingSpinner">
-                                     <div class="spinner-modern"></div>
-                                     <span class="ms-3 text-muted">Generazione hash in corso...</span>
-                                 </div>
-                             </div>
-                         </form>
-                     </div>
-                 </div>
-     
-                 <!-- Results Section -->
-                 <div id="results" class="mt-5" style="display: none;">
-                     <div class="card card-modern">
-                         <div class="card-header text-white text-center py-4" style="background: var(--success-gradient);">
-                             <h4 class="mb-0 fw-bold">
-                                 <i class="fas fa-check-circle me-2"></i>Hash Generati con Successo
-                             </h4>
-                         </div>
-                         <div class="card-body p-5" id="hashResults">
-                             <!-- Results will be inserted here via JavaScript -->
-                         </div>
-                     </div>
-                 </div>
-     
-                 <!-- Security Information -->
-                 <div class="security-info mt-5">
-                     <div class="text-center mb-4">
-                         <div class="feature-icon mx-auto" style="background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);">
-                             <i class="fas fa-shield-virus"></i>
-                         </div>
-                         <h3 class="fw-bold text-warning">Informazioni sulla Sicurezza</h3>
-                     </div>
-                     
-                     <div class="row g-4">
-                         <div class="col-md-6">
-                             <h5 class="fw-bold text-dark">
-                                 <i class="fas fa-thumbs-up me-2 text-success"></i>Algoritmi Raccomandati
-                             </h5>
-                             <ul class="list-unstyled">
-                                 <li class="mb-2">
-                                     <span class="badge bg-success me-2">SHA-256</span>
-                                     Standard industriale, molto sicuro
-                                 </li>
-                                 <li class="mb-2">
-                                     <span class="badge bg-primary me-2">SHA-384/512</span>
-                                     Massima sicurezza per dati critici
-                                 </li>
-                                 <li class="mb-2">
-                                     <span class="badge bg-danger me-2">⚠️ MD5/SHA-1</span>
-                                     Deprecati, vulnerabili ad attacchi
-                                 </li>
-                             </ul>
-                         </div>
-                         <div class="col-md-6">
-                             <h5 class="fw-bold text-dark">
-                                 <i class="fas fa-star me-2 text-warning"></i>Best Practices
-                             </h5>
-                             <ul class="list-unstyled">
-                                 <li class="mb-2">
-                                     <i class="fas fa-check text-success me-2"></i>
-                                     Salt unico per ogni hash
-                                 </li>
-                                 <li class="mb-2">
-                                     <i class="fas fa-check text-success me-2"></i>
-                                     10+ iterazioni per password
-                                 </li>
-                                 <li class="mb-2">
-                                     <i class="fas fa-check text-success me-2"></i>
-                                     Usa bcrypt/scrypt per auth
-                                 </li>
-                                 <li class="mb-2">
-                                     <i class="fas fa-check text-success me-2"></i>
-                                     Mai hash semplici per dati sensibili
-                                 </li>
-                             </ul>
-                         </div>
-                     </div>
-                 </div>
-             </div>
-         </div>
-     </div>
-     {% endblock %}
-     
-     {% block scripts %}
-     <script>
-     document.addEventListener('DOMContentLoaded', function() {
-         // Elements
-         const form = document.getElementById('hashForm');
-         const iterationSlider = document.getElementById('iterations');
-         const iterationValue = document.getElementById('iterationValue');
-         const results = document.getElementById('results');
-         const hashResults = document.getElementById('hashResults');
-         const loading = document.getElementById('loadingSpinner');
-     
-         // Update iteration value
-         iterationSlider.addEventListener('input', function() {
-             iterationValue.textContent = this.value;
-         });
-     
-         // Generate random salt
-         document.getElementById('generateSalt').addEventListener('click', async function() {
-             this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-             try {
-                 const response = await fetch('/api/generate-salt');
-                 const data = await response.json();
-                 document.getElementById('saltInput').value = data.salt;
-                 showToast('Salt generato con successo!', 'success');
-             } catch (error) {
-                 showToast('Errore nella generazione del salt', 'error');
-             } finally {
-                 this.innerHTML = '<i class="fas fa-magic"></i>';
-             }
-         });
-     
-         // Generate random text
-         document.getElementById('generateRandomText').addEventListener('click', async function() {
-             this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-             try {
-                 const response = await fetch('/api/generate-random-text');
-                 const data = await response.json();
-                 document.getElementById('inputText').value = data.text;
-                 showToast('Testo casuale generato!', 'success');
-             } catch (error) {
-                 showToast('Errore nella generazione del testo', 'error');
-             } finally {
-                 this.innerHTML = '<i class="fas fa-dice"></i>';
-             }
-         });
-     
-         // Form submission
-         form.addEventListener('submit', async function(e) {
-             e.preventDefault();
-             
-             const inputText = document.getElementById('inputText').value;
-             if (!inputText.trim()) {
-                 showToast('Inserisci del testo da convertire in hash', 'warning');
-                 return;
-             }
-     
-             // Show loading
-             loading.classList.add('show');
-             results.style.display = 'none';
-     
-             try {
-                 const response = await fetch('/api/generate-hash', {
-                     method: 'POST',
-                     headers: { 'Content-Type': 'application/json' },
-                     body: JSON.stringify({
-                         input_text: inputText,
-                         salt: document.getElementById('saltInput').value,
-                         iterations: parseInt(iterationSlider.value),
-                         use_timestamp: document.getElementById('useTimestamp').checked
-                     })
-                 });
-     
-                 const data = await response.json();
-                 
-                 if (data.success) {
-                     displayResults(data.hashes, data.input_info);
-                     results.style.display = 'block';
-                     showToast('Hash generati con successo!', 'success');
-                     
-                     // Smooth scroll to results
-                     setTimeout(() => {
-                         results.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                     }, 300);
-                 } else {
-                     showToast('Errore: ' + data.error, 'error');
-                 }
-             } catch (error) {
-                 showToast('Errore di connessione: ' + error.message, 'error');
-             } finally {
-                 loading.classList.remove('show');
-             }
-         });
-     
-         function displayResults(hashes, inputInfo) {
-             const algorithmColors = {
-                 'md5': { color: 'danger', gradient: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%)' },
-                 'sha1': { color: 'warning', gradient: 'linear-gradient(135deg, #feca57 0%, #ff9ff3 100%)' },
-                 'sha256': { color: 'success', gradient: 'linear-gradient(135deg, #48cab2 0%, #2dd4bf 100%)' },
-                 'sha384': { color: 'info', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
-                 'sha512': { color: 'primary', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }
-             };
-     
-             let html = `
-                 <div class="row mb-4">
-                     <div class="col-md-12">
-                         <div class="alert alert-light border-0" style="background: linear-gradient(135deg, rgba(0, 123, 255, 0.1) 0%, rgba(102, 126, 234, 0.1) 100%);">
-                             <h6 class="fw-bold mb-2"><i class="fas fa-info-circle me-2"></i>Informazioni Input</h6>
-                             <div class="row g-3 small">
-                                 <div class="col-sm-3">
-                                     <strong>Lunghezza testo:</strong><br>
-                                     <span class="badge bg-primary">${inputInfo.text_length} caratteri</span>
-                                 </div>
-                                 <div class="col-sm-3">
-                                     <strong>Salt:</strong><br>
-                                     <span class="badge bg-${inputInfo.salt_length > 0 ? 'success' : 'secondary'}">
-                                         ${inputInfo.salt_length > 0 ? inputInfo.salt_length + ' caratteri' : 'Non usato'}
-                                     </span>
-                                 </div>
-                                 <div class="col-sm-3">
-                                     <strong>Iterazioni:</strong><br>
-                                     <span class="badge bg-info">${inputInfo.iterations}x</span>
-                                 </div>
-                                 <div class="col-sm-3">
-                                     <strong>Timestamp:</strong><br>
-                                     <span class="badge bg-${inputInfo.timestamp_used ? 'success' : 'secondary'}">
-                                         ${inputInfo.timestamp_used ? 'Incluso' : 'Non incluso'}
-                                     </span>
-                                 </div>
-                             </div>
-                         </div>
-                     </div>
-                 </div>
-             `;
-     
-             for (const [algorithm, data] of Object.entries(hashes)) {
-                 const colorInfo = algorithmColors[algorithm] || { color: 'secondary', gradient: 'linear-gradient(135deg, #6c757d 0%, #495057 100%)' };
-                 html += `
-                     <div class="mb-4">
-                         <div class="card border-0" style="background: ${colorInfo.gradient}; color: white;">
-                             <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-                                 <div class="d-flex align-items-center">
-                                     <h5 class="mb-0 fw-bold me-3">${data.algorithm}</h5>
-                                     <span class="badge bg-white text-dark algorithm-badge">
-                                         ${data.algorithm_info.bits} bit - ${data.algorithm_info.security}
-                                     </span>
-                                 </div>
-                                 <button class="btn btn-light btn-sm copy-btn" onclick="copyToClipboard('${data.hash}', this)">
-                                     <i class="fas fa-copy me-1"></i>Copia
-                                 </button>
-                             </div>
-                             <div class="card-body pt-0">
-                                 <div class="hash-result bg-white text-dark mb-3">
-                                     ${data.hash}
-                                 </div>
-                                 <div class="row g-2 small opacity-90">
-                                     <div class="col-sm-4">
-                                         <strong>Lunghezza:</strong> ${data.hash_length} caratteri
-                                     </div>
-                                     <div class="col-sm-4">
-                                         <strong>Iterazioni:</strong> ${data.iterations}
-                                     </div>
-                                     <div class="col-sm-4">
-                                         <strong>Generato:</strong> ${new Date(data.timestamp).toLocaleTimeString()}
-                                     </div>
-                                 </div>
-                             </div>
-                         </div>
-                     </div>
-                 `;
-             }
-             
-             hashResults.innerHTML = html;
-         }
-     
-         // Global copy function
-         window.copyToClipboard = function(text, button) {
-             navigator.clipboard.writeText(text).then(function() {
-                 const originalHtml = button.innerHTML;
-                 button.innerHTML = '<i class="fas fa-check me-1"></i>Copiato!';
-                 button.classList.add('btn-success');
-                 button.classList.remove('btn-light');
-                 
-                 setTimeout(function() {
-                     button.innerHTML = originalHtml;
-                     button.classList.remove('btn-success');
-                     button.classList.add('btn-light');
-                 }, 2000);
-                 
-                 showToast('Hash copiato negli appunti!', 'success');
-             }).catch(function() {
-                 showToast('Errore nella copia', 'error');
-             });
-         };
-     
-         // Toast function
-         function showToast(message, type = 'info') {
-             const toastEl = document.getElementById('copyToast');
-             const toastBody = toastEl.querySelector('.toast-body');
-             const toastIcon = toastEl.querySelector('.toast-header i');
-             
-             toastBody.textContent = message;
-             
-             // Update icon based on type
-             toastIcon.className = `fas me-2 ${
-                 type === 'success' ? 'fa-check-circle text-success' :
-                 type === 'error' ? 'fa-exclamation-circle text-danger' :
-                 type === 'warning' ? 'fa-exclamation-triangle text-warning' :
-                 'fa-info-circle text-info'
-             }`;
-             
-             const toast = new bootstrap.Toast(toastEl);
-             toast.show();
-         }
-     });
-     </script>
-     {% endblock %}
-     
-     <!-- ========================================
-          templates/docs.html - Documentazione API
-          ======================================== -->
-     {% extends "base.html" %}
-     
-     {% block title %}API Documentation - HashGen Pro{% endblock %}
-     
-     {% block content %}
-     <div class="container py-5">
-         <div class="row justify-content-center">
-             <div class="col-lg-10">
-                 <div class="text-center mb-5">
-                     <div class="feature-icon mx-auto mb-4">
-                         <i class="fas fa-book"></i>
-                     </div>
-                     <h1 class="display-5 fw-bold gradient-text">API Documentation</h1>
-                     <p class="lead text-muted">Documentazione completa per integrare HashGen Pro nei tuoi progetti</p>
-                 </div>
-     
-                 <!-- API Overview -->
-                 <div class="card card-modern mb-5">
-                     <div class="card-header gradient-bg text-white">
-                         <h4 class="mb-0"><i class="fas fa-rocket me-2"></i>Panoramica API</h4>
-                     </div>
-                     <div class="card-body">
-                         <p>L'API di HashGen Pro offre endpoints RESTful per generare hash crittografici complessi con parametri avanzati.</p>
-                         <div class="row g-4">
-                             <div class="col-md-4 text-center">
-                                 <div class="feature-icon mx-auto mb-3" style="background: var(--success-gradient);">
-                                     <i class="fas fa-shield-alt"></i>
-                                 </div>
-                                 <h6>5 Algoritmi</h6>
-                                 <small class="text-muted">MD5, SHA-1, SHA-256, SHA-384, SHA-512</small>
-                             </div>
-                             <div class="col-md-4 text-center">
-                                 <div class="feature-icon mx-auto mb-3" style="background: var(--secondary-gradient);">
-                                     <i class="fas fa-key"></i>
-                                 </div>
-                                 <h6>Salt Personalizzato</h6>
-                                 <small class="text-muted">Entropia aggiuntiva per sicurezza</small>
-                             </div>
-                             <div class="col-md-4 text-center">
-                                 <div class="feature-icon mx-auto mb-3" style="background: var(--primary-gradient);">
-                                     <i class="fas fa-sync"></i>
-                                 </div>
-                                 <h6>Iterazioni Multiple</h6>
-                                 <small class="text-muted">Complessità computazionale avanzata</small>
-                             </div>
-                         </div>
-                     </div>
-                 </div>
-     
-                 <!-- Endpoints -->
-                 <div class="card card-modern mb-5">
-                     <div class="card-header gradient-bg text-white">
-                         <h4 class="mb-0"><i class="fas fa-plug me-2"></i>Endpoints Disponibili</h4>
-                     </div>
-                     <div class="card-body">
-                         
-                         <!-- Generate Hash -->
-                         <div class="mb-5">
-                             <h5 class="text-primary"><i class="fas fa-hammer me-2"></i>POST /api/generate-hash</h5>
-                             <p class="text-muted">Genera hash complessi per il testo fornito con tutti gli algoritmi disponibili.</p>
-                             
-                             <h6 class="mt-4">Request Body:</h6>
-                             <pre class="bg-light p-3 rounded"><code>{
-         "input_text": "string",           // Testo da hashare (obbligatorio)
-         "salt": "string",                // Salt opzionale per sicurezza
-         "iterations": 5,                 // Numero iterazioni (1-10)
-         "use_timestamp": false           // Includi timestamp per unicità
-     }</code></pre>
-     
-                             <h6 class="mt-4">Response:</h6>
-                             <pre class="bg-light p-3 rounded"><code>{
-         "success": true,
-         "hashes": {
-             "sha256": {
-                 "hash": "a1b2c3...",
-                 "algorithm": "SHA256",
-                 "salt": "random_salt",
-                 "iterations": 5,
-                 "original_length": 8,
-                 "hash_length": 64,
-                 "timestamp": "2024-01-01T12:00:00",
-                 "algorithm_info": {
-                     "bits": 256,
-                     "security": "Alto",
-                     "color": "success"
-                 }
-             },
-             // ... altri algoritmi
-         },
-         "input_info": {
-             "text_length": 8,
-             "salt_length": 32,
-             "iterations": 5,
-             "timestamp_used": false
-         }
-     }</code></pre>
-                         </div>
-     
-                         <!-- Generate Salt -->
-                         <div class="mb-5">
-                             <h5 class="text-warning"><i class="fas fa-key me-2"></i>GET /api/generate-salt</h5>
-                             <p class="text-muted">Genera un salt casuale crittograficamente sicuro.</p>
-                             
-                             <h6 class="mt-4">Query Parameters:</h6>
-                             <pre class="bg-light p-3 rounded"><code>?length=32    // Lunghezza del salt (default: 32)</code></pre>
-     
-                             <h6 class="mt-4">Response:</h6>
-                             <pre class="bg-light p-3 rounded"><code>{
-         "salt": "a1f3e9d2c4b6..."
-     }</code></pre>
-                         </div>
-     
-                         <!-- Generate Random Text -->
-                         <div class="mb-5">
-                             <h5 class="text-info"><i class="fas fa-dice me-2"></i>GET /api/generate-random-text</h5>
-                             <p class="text-muted">Genera testo casuale complesso con caratteri speciali e unicode.</p>
-                             
-                             <h6 class="mt-4">Response:</h6>
-                             <pre class="bg-light p-3 rounded"><code>{
-         "text": "K9#mP∑qR2∇nL5xC∫..."
-     }</code></pre>
-                         </div>
-     
-                         <!-- Health Check -->
-                         <div class="mb-5">
-                             <h5 class="text-success"><i class="fas fa-heartbeat me-2"></i>GET /health</h5>
-                             <p class="text-muted">Verifica lo stato di salute dell'applicazione.</p>
-                             
-                             <h6 class="mt-4">Response:</h6>
-                             <pre class="bg-light p-3 rounded"><code>{
-         "status": "healthy",
-         "timestamp": "2024-01-01T12:00:00",
-         "algorithms_available": ["md5", "sha1", "sha256", "sha384", "sha512"]
-     }</code></pre>
-                         </div>
-                     </div>
-                 </div>
-     
-                 <!-- Examples -->
-                 <div class="card card-modern mb-5">
-                     <div class="card-header gradient-bg text-white">
-                         <h4 class="mb-0"><i class="fas fa-code me-2"></i>Esempi di Utilizzo</h4>
-                     </div>
-                     <div class="card-body">
-                         
-                         <!-- JavaScript Example -->
-                         <div class="mb-5">
-                             <h5 class="text-primary">JavaScript/Fetch</h5>
-                             <pre class="bg-dark text-light p-4 rounded"><code>// Genera hash per una password
-     const response = await fetch('/api/generate-hash', {
-         method: 'POST',
-         headers: {
-             'Content-Type': 'application/json',
-         },
-         body: JSON.stringify({
-             input_text: 'MySecurePassword123',
-             salt: 'random_salt_here',
-             iterations: 10,
-             use_timestamp: false
-         })
-     });
-     
-     const data = await response.json();
-     console.log('SHA-256 Hash:', data.hashes.sha256.hash);</code></pre>
-                         </div>
-     
-                         <!-- Python Example -->
-                         <div class="mb-5">
-                             <h5 class="text-success">Python/Requests</h5>
-                             <pre class="bg-dark text-light p-4 rounded"><code>import requests
-     
-     # Genera salt
-     salt_response = requests.get('https://tuodominio.com/api/generate-salt')
-     salt = salt_response.json()['salt']
-     
-     # Genera hash
-     hash_response = requests.post('https://tuodominio.com/api/generate-hash', json={
-         'input_text': 'MySecurePassword123',
-         'salt': salt,
-         'iterations': 10,
-         'use_timestamp': False
-     })
-     
-     hashes = hash_response.json()['hashes']
-     print(f"SHA-256: {hashes['sha256']['hash']}")</code></pre>
-                         </div>
-     
-                         <!-- cURL Example -->
-                         <div class="mb-5">
-                             <h5 class="text-warning">cURL</h5>
-                             <pre class="bg-dark text-light p-4 rounded"><code># Genera hash
-     curl -X POST https://tuodominio.com/api/generate-hash \
-       -H "Content-Type: application/json" \
-       -d '{
-         "input_text": "MySecurePassword123",
-         "salt": "random_salt_here", 
-         "iterations": 10,
-         "use_timestamp": false
-       }'</code></pre>
-                         </div>
-                     </div>
-                 </div>
-     
-                 <!-- Error Codes -->
-                 <div class="card card-modern">
-                     <div class="card-header bg-danger text-white">
-                         <h4 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Codici di Errore</h4>
-                     </div>
-                     <div class="card-body">
-                         <div class="table-responsive">
-                             <table class="table table-striped">
-                                 <thead>
-                                     <tr>
-                                         <th>Codice</th>
-                                         <th>Messaggio</th>
-                                         <th>Descrizione</th>
-                                     </tr>
-                                 </thead>
-                                 <tbody>
-                                     <tr>
-                                         <td><span class="badge bg-warning">400</span></td>
-                                         <td>Testo di input richiesto</td>
-                                         <td>Il campo input_text è obbligatorio</td>
-                                     </tr>
-                                     <tr>
-                                         <td><span class="badge bg-warning">400</span></td>
-                                         <td>Iterazioni non valide</td>
-                                         <td>Le iterazioni devono essere tra 1 e 10</td>
-                                     </tr>
-                                     <tr>
-                                         <td><span class="badge bg-danger">500</span></td>
-                                         <td>Errore interno del server</td>
-                                         <td>Errore durante la generazione dell'hash</td>
-                                     </tr>
-                                     <tr>
-                                         <td><span class="badge bg-secondary">404</span></td>
-                                         <td>Endpoint non trovato</td>
-                                         <td>URL richiesto non esiste</td>
-                                     </tr>
-                                 </tbody>
-                             </table>
-                         </div>
-                     </div>
-                 </div>
-             </div>
-         </div>
-     </div>
-     {% endblock %}
-     
-     <!-- ========================================
-          templates/404.html - Pagina 404
-          ======================================== -->
-     {% extends "base.html" %}
-     {% block title %}404 - Pagina Non Trovata{% endblock %}
-     
-     {% block content %}
-     <div class="container py-5">
-         <div class="row justify-content-center text-center">
-             <div class="col-lg-6">
-                 <div class="feature-icon mx-auto mb-4" style="width: 100px; height: 100px; font-size: 48px; background: var(--secondary-gradient);">
-                     <i class="fas fa-exclamation-triangle"></i>
-                 </div>
-                 <h1 class="display-1 fw-bold gradient-text">404</h1>
-                 <h2 class="mb-4">Pagina Non Trovata</h2>
-                 <p class="text-muted mb-4">La pagina che stai cercando non esiste o è stata spostata.</p>
-                 <a href="{{ url_for('index') }}" class="btn btn-primary-modern btn-modern">
-                     <i class="fas fa-home me-2"></i>Torna alla Home
-                 </a>
-             </div>
-         </div>
-     </div>
-     {% endblock %}
-     
-     <!-- ========================================
-          templates/500.html - Errore Server
-          ======================================== -->
-     {% extends "base.html" %}
-     {% block title %}500 - Errore Server{% endblock %}
-     
-     {% block content %}
-     <div class="container py-5">
-         <div class="row justify-content-center text-center">
-             <div class="col-lg-6">
-                 <div class="feature-icon mx-auto mb-4" style="width: 100px; height: 100px; font-size: 48px; background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);">
-                     <i class="fas fa-server"></i>
-                 </div>
-                 <h1 class="display-1 fw-bold text-danger">500</h1>
-                 <h2 class="mb-4">Errore del Server</h2>
-                 <p class="text-muted mb-4">Si è verificato un errore interno. Riprova tra qualche minuto.</p>
-                 <div class="d-flex gap-3 justify-content-center">
-                     <a href="{{ url_for('index') }}" class="btn btn-primary-modern btn-modern">
-                         <i class="fas fa-home me-2"></i>Torna alla Home
-                     </a>
-                     <button onclick="location.reload()" class="btn btn-outline-primary btn-modern">
-                         <i class="fas fa-refresh me-2"></i>Ricarica Pagina
-                     </button>
-                 </div>
-             </div>
-         </div>
-     </div>
-     {% endblock %}
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hash Generator Pro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+        }
+        .hash-card {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+        }
+        .btn-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="hash-card p-5">
+                    <div class="text-center mb-5">
+                        <h1 class="display-4 fw-bold mb-3">🔐 Hash Generator Pro</h1>
+                        <p class="lead">Crea hash crittografici complessi e sicuri</p>
+                    </div>
+
+                    <form id="hashForm">
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Testo da convertire</label>
+                                <textarea id="inputText" class="form-control" rows="4" 
+                                    placeholder="Inserisci il testo da convertire in hash..."></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Salt (opzionale)</label>
+                                <input type="text" id="saltInput" class="form-control mb-3" 
+                                    placeholder="Salt per maggiore sicurezza...">
+                                
+                                <label class="form-label fw-bold">Iterazioni: <span id="iterationValue">5</span></label>
+                                <input type="range" id="iterations" class="form-range" min="1" max="10" value="5">
+                                
+                                <div class="form-check mt-3">
+                                    <input type="checkbox" id="useTimestamp" class="form-check-input">
+                                    <label class="form-check-label">Includi timestamp</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-gradient btn-lg px-5">
+                                🔐 Genera Hash
+                            </button>
+                        </div>
+                    </form>
+
+                    <div id="results" style="display: none;" class="mt-5">
+                        <h3>Hash Generati:</h3>
+                        <div id="hashResults"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('iterations').addEventListener('input', function() {
+            document.getElementById('iterationValue').textContent = this.value;
+        });
+
+        document.getElementById('hashForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const inputText = document.getElementById('inputText').value;
+            if (!inputText.trim()) {
+                alert('Inserisci del testo da convertire in hash');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/generate-hash', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        input_text: inputText,
+                        salt: document.getElementById('saltInput').value,
+                        iterations: parseInt(document.getElementById('iterations').value),
+                        use_timestamp: document.getElementById('useTimestamp').checked
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    let html = '';
+                    for (const [algorithm, hashData] of Object.entries(data.hashes)) {
+                        html += `
+                            <div class="card mb-3">
+                                <div class="card-header d-flex justify-content-between">
+                                    <strong>${hashData.algorithm}</strong>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="navigator.clipboard.writeText('${hashData.hash}')">Copia</button>
+                                </div>
+                                <div class="card-body">
+                                    <code style="word-break: break-all;">${hashData.hash}</code>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    document.getElementById('hashResults').innerHTML = html;
+                    document.getElementById('results').style.display = 'block';
+                }
+            } catch (error) {
+                alert('Errore: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>
